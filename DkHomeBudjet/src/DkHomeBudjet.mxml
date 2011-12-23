@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   minWidth="1024" creationComplete="init()" minHeight="600" width="1024" height="625" pageTitle="Home budjet">
+	<fx:Script>
+		<![CDATA[
+			import flash.data.*;
+			import flash.events.SQLErrorEvent;
+			import flash.events.SQLEvent;
+			import flash.filesystem.File;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.FlexEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.utils.*;
+			
+			private var conn:SQLConnection;
+			private var sqlStat:SQLStatement;
+			private var dbFile:File = File.applicationDirectory.resolvePath("budjet.db3");
+			[Bindable] private var expensesTab:Object=new Object();
+			[Bindable] private var incomesTab:Object=new Object();
+			private var mnths:int = 1;
+			private var amount:Number = 0;	
+			private var stat:String = "Fixed";
+			private var end_date:Date = null;
+			private var total:Number = 0;
+			private var totalF:Number = 0;
+			private var totalT:Number = 0;
+			
+			private function init():void{
+				conn = new SQLConnection();
+				conn.open(dbFile);
+				dbTabInit();
+			} 			
+			private function dbTabInit():void{ 
+				sqlStat = new SQLStatement();
+				sqlStat.sqlConnection = conn; 
+				var sql:String = "";
+				sql = "SELECT * FROM expenses";				
+				sqlStat.text = sql;
+				sqlStat.execute();                     
+				var result:Array = new Array();
+				result = sqlStat.getResult().data;
+				if(result != null && result !=new Array() ){	
+						expensesTab = result;
+				}
+				sql = "SELECT * FROM incomes";				
+				sqlStat.text = sql;
+				sqlStat.execute();                     
+				result = new Array();
+				result = sqlStat.getResult().data;
+				if(result != null && result !=new Array() ){	
+					incomesTab = result;
+				}				
+			}	
+			
+			private function reset(spec:int):void{
+				if(spec==0){
+					name2add.text = "";
+					date2add.text = "";
+					this.amount = 0;
+					this.amountF.text = "";
+					this.amountT.text = "";
+					this.amounttemp.text = "";
+					this.textIn.text = "0";
+				}
+
+			}
+			
+			private function insertInc():void{				
+				var sql:String = "";			
+				end_date = dateAdd("month", monthtemp.value-1,date2add.selectedDate);
+				sql = "Insert into incomes (name,due_date,amount,status,end_date) values ('"+name2add.text+"','"+format.format(date2add.selectedDate)+"','"+amount+"','"+stat+"','"+format.format(end_date)+"')";				
+				sqlStat.text = sql;
+				sqlStat.execute();
+				reset(0);
+				init();				
+			}
+			private function insertExp():void{
+				var sql:String = "";
+				end_date = dateAdd("month", monthtemp.value-1,date2add.selectedDate);
+				sql = "Insert into expenses (name,due_date,amount,status,end_date) values ('"+name2add.text+"','"+format.format(date2add.selectedDate)+"','"+amount+"','"+stat+"','"+format.format(end_date)+"')";				
+				sqlStat.text = sql;
+				sqlStat.execute();
+				reset(0);					
+				init();
+			}
+			
+			
+			public function todo(opt:int):void{
+				if(opt==0){
+					if(bymth.selected)mnths=1;
+					else mnths=12;
+					amountF.text = (Number(textIn.text)/mnths).toFixed(2);
+					amount = Number(amountF.text);				
+				}
+				else if(opt==1){
+					amountT.text = (Number(amounttemp.text)/(monthtemp.value.valueOf())).toFixed(2);
+					amount = Number(amountT.text);
+					mnths = (monthtemp.value.valueOf());
+				}
+				else if(opt==2){
+					this.amountOption.visible=false;
+					this.amountFixed.visible=addBack.visible=true;
+					stat = "Fixed";
+					end_date = null;
+				}
+				else if(opt==3){
+					this.amountOption.visible=false;
+					this.amountTemp.visible=addBack.visible=true;
+					stat = "Temporay";					
+				}
+				else if(opt==4){
+					if(mainacc.selectedIndex==0){
+						currentState = "resume";
+					}
+					else if(mainacc.selectedIndex==1){
+						currentState = "expenses";
+					}
+					else if(mainacc.selectedIndex==2){
+						currentState = "incomes";
+					}
+				}
+				else if(opt==5){
+					total = 0;
+					totalF = 0;
+					totalT = 0;
+					if(mainacc.selectedIndex==1){
+						for(var i:int=0;i<expensesTab.length;i++){
+							if(expensesTab[i].status=="Fixed") totalF+=Number(expensesTab[i].amount);
+							else totalT+=Number(expensesTab[i].amount);
+						}
+						
+						total = totalF+totalT;
+						totalFLe.text = currencyFormatter.format(totalF);
+						totalTLe.text = currencyFormatter.format(totalT);	
+						totalLe.text = currencyFormatter.format(total);
+					}
+					else if(mainacc.selectedIndex==2){
+						for(i=0;i<incomesTab.length;i++){
+							if(incomesTab[i].status=="Fixed"){ 
+								totalF+=incomesTab[i].amount;
+							}
+							else totalT+=Number(incomesTab[i].amount);
+						}
+						total = totalF+totalT;
+						totalFLi.text = currencyFormatter.format(totalF);
+						totalTLi.text = currencyFormatter.format(totalT);					
+						totalLi.text = currencyFormatter.format(total);
+					}					
+				}
+			}
+				
+			private function date_labelFunc(item:Object, column:DataGridColumn):String {
+				return format.format(item.due_date);
+			}
+			
+			private function price_labelFunc(item:Object, column:DataGridColumn):String {
+			return currencyFormatter.format(item.amount);
+			}
+			
+			private function price_sortCompareFunc(itemA:Object, itemB:Object):int {
+			return ObjectUtil.numericCompare(itemA.amount, itemB.amount);
+			}
+
+			private function dateAdd(datepart:String = "", number:Number = 0, date:Date = null):Date {
+				if (date == null) {
+					/* Default to current date. */
+					date = new Date();
+				}
+				
+				var returnDate:Date = new Date(date.time);;
+				
+				switch (datepart.toLowerCase()) {
+					case "fullyear":
+					case "month":
+					case "date":
+					case "hours":
+					case "minutes":
+					case "seconds":
+					case "milliseconds":
+						returnDate[datepart] += number;
+						break;
+					default:
+						/* Unknown date part, do nothing. */
+						break;
+				}
+				return returnDate;
+			}
+		]]>
+	</fx:Script>
+	<s:states>
+		<s:State name="resume"/>
+		<s:State name="expenses"/>
+		<s:State name="incomes"/>
+	</s:states>
+	<fx:Declarations>
+		<s:RadioButtonGroup id="frequency"/>
+		<s:RadioButtonGroup id="amt_option"/>
+		<mx:DateFormatter formatString="YYYY-MM-DD" id="format"/>
+		<mx:CurrencyFormatter id="currencyFormatter" precision="2" useNegativeSign="false" />
+	</fx:Declarations>
+	<s:BorderContainer width="1024" height="600" horizontalCenter="0" top="0" borderVisible="true" cornerRadius="10" borderColor="#000000" contentBackgroundAlpha="0.0" backgroundImage="@Embed(source='../libs/bgrd0.jpg')">				
+		<s:BorderContainer visible="true" width="900" height="490" top="100" backgroundAlpha="0.3" left="0">
+			<mx:Accordion id="mainacc" change="todo(4)" width="100%" height="100%" horizontalCenter="0" verticalCenter="0">
+				<s:NavigatorContent label="Resume" width="100%" height="100%" fontFamily="Georgia">					
+				</s:NavigatorContent>
+				<s:NavigatorContent label="Expenses" width="100%" height="100%">
+					<mx:DataGrid dataProvider="{expensesTab}" width="450" height="90%" top="25" dropShadowVisible="true" rowHeight="25" id="expensesDg" left="25" contentBackgroundAlpha="1.0" borderVisible="true" textAlign="right" rollOverColor="#D7F5A5" selectionColor="#9FB479" focusColor="#A1BE6E" updateComplete.expenses="todo(5)" height.expenses="375" top.expenses="45" left.expenses="25">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Name" dataField="name" resizable="true" width="200"/>							
+							<mx:DataGridColumn headerText="Due date" labelFunction="date_labelFunc" dataField="due_date" width="125" resizable="true"/>
+							<mx:DataGridColumn headerText="Amount" labelFunction="price_labelFunc" dataField="amount" resizable="true" width="125"/>
+						</mx:columns>
+					</mx:DataGrid>
+					<s:BorderContainer width="380" height="85%" right="25" top="25" dropShadowVisible="true" backgroundAlpha="0.0">
+						<s:Label x="10" y="10" text="Expenses Informations" textDecoration="underline" verticalAlign="middle" fontFamily="Arial" fontWeight="bold" fontSize="13" height="25" color="#000000"/>
+						<s:Label text="Fixed expenses :" fontSize="13" height="20" verticalAlign="middle" width="150" textAlign="right" left="50" top="50"/>
+						<s:Label text="Temporary expenses :" fontSize="13" height="20" verticalAlign="middle" width="150" textAlign="right" left="50" top="70"/>
+						<s:Label text="Expenses Total :" fontSize="13" height="20" verticalAlign="middle" textDecoration="underline" width="150" textAlign="right" left="50" top="90"/>
+						<s:Label id="totalLe" x="218" y="89" text="Label" width="100" height="20" textAlign="right" verticalAlign="bottom" fontWeight="bold" fontSize="13"/>
+						<s:Label id="totalFLe" x="218" y="47" text="Label" width="100" height="20" textAlign="right" verticalAlign="bottom" fontWeight="bold" fontSize="13"/>
+						<s:Label id="totalTLe" x="218" y="66" text="Label" width="100" height="20" textAlign="right" verticalAlign="bottom" fontWeight="bold" fontSize="13"/>
+					</s:BorderContainer>
+					<s:Button includeIn="expenses" x="25" y="10" label="Button"/>
+					<s:Button includeIn="expenses" x="116" y="10" label="Button"/>
+					<s:Button includeIn="expenses" x="213" y="10" label="Button"/>
+				</s:NavigatorContent>
+				<s:NavigatorContent label="Incomes" width="100%" height="100%" updateComplete.incomes="todo(5)">
+					<mx:DataGrid dataProvider="{incomesTab}" width="450" height="90%" top="25" dropShadowVisible="true" rowHeight="25" id="incomesDg" left="25" contentBackgroundAlpha="1.0" borderVisible="true" textAlign="right" rollOverColor="#D7F5A5" selectionColor="#9FB479" focusColor="#A1BE6E">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Name" dataField="name" resizable="true" width="200"/>							
+							<mx:DataGridColumn headerText="Due date" labelFunction="date_labelFunc" dataField="due_date" width="125" resizable="true"/>
+							<mx:DataGridColumn headerText="Amount" labelFunction="price_labelFunc" dataField="amount" resizable="true" width="125"/>
+						</mx:columns>
+					</mx:DataGrid>
+					<s:BorderContainer width="380" height="85%" right="25" top="25" dropShadowVisible="true" backgroundAlpha="0.0">
+						<s:Label x="10" y="10" text="Incomes Informations" textDecoration="underline" verticalAlign="middle" fontFamily="Arial" fontWeight="bold" fontSize="13" height="25" color="#000000"/>
+						<s:Label text="Fixed incomes :" fontSize="13" height="20" verticalAlign="middle" width="150" textAlign="right" left="50" top="50"/>
+						<s:Label text="Temporary incomes :" fontSize="13" height="20" verticalAlign="middle" width="150" textAlign="right" left="50" top="70"/>
+						<s:Label text="Incomes Total :" fontSize="13" height="20" verticalAlign="middle" textDecoration="underline" width="150" textAlign="right" left="50" top="90"/>
+						<s:Label x="218" y="89" text="Label" width="100" height="20" textAlign="right" verticalAlign="bottom" fontWeight="bold" fontSize="13" id="totalLi"/>
+						<s:Label x="218" y="47" text="Label" width="100" height="20" textAlign="right" verticalAlign="bottom" fontWeight="bold" fontSize="13" id="totalFLi"/>
+						<s:Label x="218" y="66" text="Label" width="100" height="20" textAlign="right" verticalAlign="bottom" fontWeight="bold" fontSize="13" id="totalTLi"/>				
+					</s:BorderContainer>					
+
+				</s:NavigatorContent>
+			</mx:Accordion>
+		</s:BorderContainer>
+		<s:VGroup width="120" height="300" right="0" verticalCenter="50">
+			<s:Button label="Add" width="100%" height="100" chromeColor="#D7F5A5" label.incomes="Add Income" label.expenses="Add Expense" click.incomes="{reset(0);adder.visible = !adder.visible}" click.expenses="{reset(0);adder.visible = !adder.visible}"/>
+			<s:Button label="Modify" width="100%" height="100" chromeColor="#D7F5A5"/>
+			<s:Button label="Button" width="100%" height="100" chromeColor="#D7F5A5"/>
+		</s:VGroup>
+	</s:BorderContainer>
+	<s:BorderContainer width="460" height="310" top="170" backgroundAlpha="0.93" includeIn="expenses,incomes" top.expenses="280" width.expenses="360" height.expenses="230" right.expenses="160" backgroundAlpha.expenses="0.0" dropShadowVisible.expenses="false" borderVisible.expenses="false" top.incomes="300" right.incomes="160" width.incomes="360" height.incomes="230" backgroundAlpha.incomes="0.0" borderVisible.incomes="false">
+		<mx:PieChart includeIn="expenses,incomes" x="0" y="0" id="chart" width="365" height="230" dataProvider.expenses="{expensesTab}" showDataTips="true" x.expenses="0" y.expenses="0" dataProvider.incomes="{incomesTab}" width.expenses="360" width.incomes="360" y.incomes="0" styleName.expenses="name">
+			<mx:series>
+				<mx:PieSeries labelPosition="callout" labelField="name" field="amount"/>
+			</mx:series>
+		</mx:PieChart>
+		<mx:Legend includeIn="expenses,incomes" dataProvider="{chart}" visible="false"/>
+		
+	</s:BorderContainer>
+	<s:BorderContainer visible="true" id="adder" width="460" height="310" top="170" backgroundAlpha="0.93" horizontalCenter="-51" backgroundColor="#D7F5A5" includeIn="expenses,incomes" height.expenses="340" top.expenses="170" horizontalCenter.expenses="-51">
+		<s:Label text="Add new expense" textDecoration="underline" horizontalCenter="0" top="20" text.incomes="Add new income"/>
+		<s:VGroup width="95%" height="215" horizontalCenter="-0" top="50" horizontalAlign="center" top.expenses="50" horizontalCenter.expenses="-0" height.expenses="245">
+			<s:BorderContainer width="90%" height="50" dropShadowVisible="true" backgroundAlpha="0.0" height.expenses="80">
+			<s:HGroup width="100%" height="50" verticalAlign="middle" paddingLeft="25" paddingRight="25" x.expenses="0" y.expenses="27">
+			<s:Label text="Name:" width="110"/>
+			<s:TextInput width="200" height="30" textAlign="right" id="name2add"/>
+			</s:HGroup>
+			<mx:PopUpButton includeIn="expenses" x="143" y="8" label="PopUpButton"/>
+			</s:BorderContainer>	
+			<s:BorderContainer width="90%" height="50" dropShadowVisible="true" backgroundAlpha="0.0">
+			<s:HGroup width="100%" height="50" verticalAlign="middle" paddingLeft="25" paddingRight="25">
+			<s:Label text="Due date:" width="110"/>
+			<mx:DateField height="30" width="200" textAlign="right" id="date2add"/>
+			</s:HGroup>
+			</s:BorderContainer>
+			<s:BorderContainer width="90%" height="95" dropShadowVisible="true" backgroundAlpha="0.0">					
+				<s:VGroup visible="false" width="100%" height="100%" verticalAlign="top" paddingLeft="25" paddingRight="25" paddingTop="10" id="amountTemp" horizontalCenter="0" top="-5">
+					<s:HGroup width="100%" height="35" verticalAlign="middle" paddingLeft="100" gap="18" paddingRight="10">
+					<s:Label text="0,00$" height="30" verticalAlign="middle" id="amountT"/>
+					<s:Label text="for monthly amount" textDecoration="underline"/>
+					</s:HGroup>	
+					<s:HGroup width="100%" height="45" verticalAlign="middle" paddingLeft="10" gap="18" paddingRight="10">
+					<s:Label text="Amount:"/>
+					<s:TextInput change="{todo(1)}" height="30" width="100" textAlign="right" id="amounttemp"/>
+					<s:Label text="For "/>
+					<s:NumericStepper change="{todo(1)}" minimum="1" maximum="12" stepSize="1" id="monthtemp"/>
+					<s:Label text="Month(s)"/>
+					</s:HGroup>					
+				</s:VGroup>		
+				<mx:Image visible="false" click="this.amountOption.visible=true;this.amountFixed.visible=this.amountTemp.visible=this.addBack.visible=false" id="addBack" source="@Embed(source='../libs/back.png')" width="20" height="20" x="5" y="5" scaleContent="true" autoLoad="true">
+					
+				</mx:Image>
+				<s:VGroup visible="false" width="100%" height="100%" verticalAlign="top" paddingLeft="25" paddingRight="25" paddingTop="10" id="amountFixed">
+					<s:HGroup width="100%" height="35" verticalAlign="middle">
+					<s:Label text="Amount:" width="110" paddingLeft="10"/>
+					<s:RadioButton click="{todo(0)}" id="bymth" label="Monthly" groupName="frequency" width="100" selected="true"/>
+					<s:RadioButton click="{todo(0)}" label="Yearly" id="byyr" groupName="frequency" width="100"/>
+					</s:HGroup>
+					<s:HGroup width="100%" height="35" verticalAlign="middle" paddingLeft="5" gap="30">
+					<s:TextInput change="{todo(0)}" id="textIn" paddingRight="3" text="" textAlign="right"/>
+					<s:Label id="amountF" text="0,00$" width="110" textAlign="right" height="20" verticalAlign="middle"/>
+					</s:HGroup>					
+				</s:VGroup>
+				<s:VGroup visible="true" width="100%" height="100%" verticalAlign="top" paddingLeft="25" paddingRight="25" paddingTop="10" id="amountOption" x="-0.95" y="-2.6">
+					<s:Label text="what kind of amount is it ??" height="20" verticalAlign="middle" paddingLeft="10"/>
+					<s:HGroup width="100%" height="35" verticalAlign="middle" paddingLeft="100" gap="30">
+					<s:RadioButton click="{todo(2)}" label="Fixed" groupName="amt_option" width="30%"/>
+					<s:RadioButton click="{todo(3)}"  label="Temporal" groupName="amt_option" width="30%"/>
+					</s:HGroup>					
+				</s:VGroup>
+			</s:BorderContainer>
+		</s:VGroup>
+		<s:Button label="Submit" horizontalCenter="77" verticalCenter="129" chromeColor="#D7F5A5" height="30" click.incomes="{insertInc();}" click.expenses="{insertExp();}" horizontalCenter.expenses="77" verticalCenter.expenses="150"/>
+		<s:Button label="Reset" horizontalCenter="165" verticalCenter="128" chromeColor="#D7F5A5" height="30" click="{reset(0)}" horizontalCenter.expenses="165" verticalCenter.expenses="150"/>
+	</s:BorderContainer>	
+	<s:BorderContainer width="1024" height="100" horizontalCenter="0" top="0" backgroundColor="#394B19" borderVisible="true" cornerRadius="10" borderColor="#000000">		
+	</s:BorderContainer>
+	<s:BorderContainer visible="false" width="600" height="400" horizontalCenter="0" top="100" backgroundColor="#D7F5A5" borderColor="#E6FAD3" cornerRadius="5">
+		<s:VGroup width="75%" height="300" top="50" horizontalCenter="0" horizontalAlign="center" paddingTop="50">
+			<s:HGroup width="80%" height="50" horizontalAlign="center" verticalAlign="middle">
+				<s:Label text="Username:" paddingTop="10" paddingLeft="0" paddingRight="100" fontFamily="Verdana" fontWeight="bold" fontStyle="normal" textDecoration="none" fontSize="15" width="200" height="30"/>
+				<s:TextInput paddingTop="10" width="200" height="30"/>
+			</s:HGroup>
+			<s:HGroup width="80%" height="50" horizontalAlign="center" verticalAlign="middle">
+				<s:Label text="Password :" paddingTop="10" paddingLeft="0" paddingRight="100" fontFamily="Verdana" fontWeight="bold" fontStyle="normal" textDecoration="none" fontSize="15" width="200" height="30"/>
+				<s:TextInput paddingTop="10" width="200" height="30"/>
+			</s:HGroup>
+			<s:HGroup width="75%" height="100" horizontalAlign="center" verticalAlign="middle" paddingTop="0">
+				<s:Button label="Login" width="100" height="30"/>
+				<s:Button label="Cancel" width="100" height="30"/>
+			</s:HGroup>
+		</s:VGroup>
+		<s:Label x="204" y="30" text="Access account" fontSize="30" fontFamily="Times New Roman" fontWeight="normal" textDecoration="underline" verticalAlign="top" color="#313C1F"/>
+	</s:BorderContainer>
+	<s:BorderContainer visible="false" width="600" height="450" horizontalCenter="-0" top="100">
+		<s:VGroup width="95%" height="95%" horizontalCenter="0" verticalCenter="0">
+			<s:HGroup width="100%" height="50%">
+				<s:Button label="Button" width="50%" height="100%" chromeColor="#D7F5A5"/>
+				<s:Button label="Button" width="50%" height="100%" chromeColor="#D7F5A5"/>
+			</s:HGroup>
+			<s:HGroup width="100%" height="50%">
+				<s:Button label="Button" width="50%" height="100%" chromeColor="#D7F5A5"/>
+				<s:Button label="Button" width="50%" height="100%" chromeColor="#D7F5A5"/>
+			</s:HGroup>			
+		</s:VGroup>
+	</s:BorderContainer>
+</s:WindowedApplication>
