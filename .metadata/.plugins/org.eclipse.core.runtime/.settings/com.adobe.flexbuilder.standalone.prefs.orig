@@ -1,0 +1,11 @@
+<<<<<<< HEAD
+#Fri Dec 23 02:37:55 EST 2011
+flexbuilder.usagedata.collector.deactivated=true
+flexbuilder.afterFirstLaunch=true
+eclipse.preferences.version=1
+=======
+#Fri Dec 23 02:37:55 EST 2011
+flexbuilder.usagedata.collector.deactivated=true
+flexbuilder.afterFirstLaunch=true
+eclipse.preferences.version=1
+>>>>>>> 0c6ad2961945e4ee7d5d9d5db6547dd30e90e708

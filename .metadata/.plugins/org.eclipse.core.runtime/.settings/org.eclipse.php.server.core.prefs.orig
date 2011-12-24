@@ -1,0 +1,11 @@
+<<<<<<< HEAD
+#Fri Dec 23 02:30:09 EST 2011
+eclipse.preferences.version=1
+defaultPHPServer=Local Zend Server
+phpServers=<server><zendserver_default_port>10081</zendserver_default_port><port>80</port><name>Local Zend Server</name><zendserver_defaulturl>/ZendServer</zendserver_defaulturl><zendserver_enabled>true</zendserver_enabled><hostname>localhost</hostname><base_url>http\://localhost</base_url><document_root>C\:\\Apache2\\htdocs</document_root><InstallLocation>C\:\\</InstallLocation></server>
+=======
+#Fri Dec 23 02:30:09 EST 2011
+eclipse.preferences.version=1
+defaultPHPServer=Local Zend Server
+phpServers=<server><zendserver_default_port>10081</zendserver_default_port><port>80</port><name>Local Zend Server</name><zendserver_defaulturl>/ZendServer</zendserver_defaulturl><zendserver_enabled>true</zendserver_enabled><hostname>localhost</hostname><base_url>http\://localhost</base_url><document_root>C\:\\Apache2\\htdocs</document_root><InstallLocation>C\:\\</InstallLocation></server>
+>>>>>>> 0c6ad2961945e4ee7d5d9d5db6547dd30e90e708

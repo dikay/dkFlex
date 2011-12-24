@@ -1,0 +1,11 @@
+<<<<<<< HEAD
+#Fri Dec 23 02:37:56 EST 2011
+eclipse.preferences.version=1
+preferredTargets=org.eclipse.atf.mozilla.ide.debug.ui.JStoggleTargetFactory\:org.eclipse.php.debug.ui.PHPtoggleTargetFactory|
+org.eclipse.debug.ui.PREF_LAUNCH_PERSPECTIVES=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\r\n<launchPerspectives/>\r\n
+=======
+#Fri Dec 23 02:37:56 EST 2011
+eclipse.preferences.version=1
+preferredTargets=org.eclipse.atf.mozilla.ide.debug.ui.JStoggleTargetFactory\:org.eclipse.php.debug.ui.PHPtoggleTargetFactory|
+org.eclipse.debug.ui.PREF_LAUNCH_PERSPECTIVES=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\r\n<launchPerspectives/>\r\n
+>>>>>>> 0c6ad2961945e4ee7d5d9d5db6547dd30e90e708
