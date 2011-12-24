@@ -206,6 +206,7 @@
 		<s:BorderContainer visible="true" width="900" height="490" top="100" backgroundAlpha="0.3" left="0">
 			<mx:Accordion id="mainacc" change="todo(4)" width="100%" height="100%" horizontalCenter="0" verticalCenter="0">
 				<s:NavigatorContent label="Resume" width="100%" height="100%" fontFamily="Georgia">					
+					<mx:DateField includeIn="resume" x="400" y="62"/>
 				</s:NavigatorContent>
 				<s:NavigatorContent label="Expenses" width="100%" height="100%">
 					<mx:DataGrid dataProvider="{expensesTab}" width="450" height="90%" top="25" dropShadowVisible="true" rowHeight="25" id="expensesDg" left="25" contentBackgroundAlpha="1.0" borderVisible="true" textAlign="right" rollOverColor="#D7F5A5" selectionColor="#9FB479" focusColor="#A1BE6E" updateComplete.expenses="todo(5)" height.expenses="375" top.expenses="45" left.expenses="25">
